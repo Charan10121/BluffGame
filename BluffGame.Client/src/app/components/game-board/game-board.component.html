@@ -1,0 +1,140 @@
+@if (gameState(); as state) {
+  <div class="game-board">
+
+    <!-- ── Opponents ───────────────────────────────────────────────── -->
+    <div class="opponents-row">
+      @for (opp of opponents(); track opp.id) {
+        <div class="opponent-panel"
+             [class.active]="isCurrentPlayer(opp.id)"
+             [class.disconnected]="!opp.isConnected"
+             [class.won]="opp.hasWon">
+          <div class="opp-avatar">{{ opp.isBot ? '🤖' : '👤' }}</div>
+          <div class="opp-name">{{ opp.name }}</div>
+          <div class="opp-cards">
+            🃏 {{ opp.cardCount }}
+            @if (opp.hasWon) { <span class="win-badge">🏆</span> }
+          </div>
+          @if (!opp.isConnected) {
+            <div class="opp-status">Disconnected</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ── Center area: pile + claim + challenge ───────────────────── -->
+    <div class="center-area">
+      <!-- Pile -->
+      <div class="pile-area">
+        <div class="pile-stack">
+          @for (i of [].constructor(Math.min(state.pileCount, 5)); track i) {
+            <div class="pile-card" [style.transform]="'rotate(' + (i * 7 - 14) + 'deg)'"></div>
+          }
+          @if (state.pileCount === 0) {
+            <div class="pile-empty">Empty</div>
+          }
+        </div>
+        <div class="pile-count">Pile: {{ state.pileCount }} cards</div>
+      </div>
+
+      <!-- Last claim -->
+      @if (state.lastClaim) {
+        <div class="claim-display animate-fade-in">
+          <span class="claim-player">{{ state.lastClaim.playerName }}</span> played
+          <span class="claim-detail">{{ state.lastClaim.cardCount }}
+            {{ state.lastClaim.claimedRank }}{{ state.lastClaim.cardCount > 1 ? 's' : '' }}</span>
+        </div>
+      }
+
+      <!-- Challenge result -->
+      @if (state.lastChallengeResult; as cr) {
+        <div class="challenge-result animate-fade-in" [class.was-bluff]="cr.wasBluff">
+          <div class="cr-title">{{ cr.wasBluff ? '🔥 BLUFF CAUGHT!' : '✅ Honest play!' }}</div>
+          <div class="cr-detail">
+            {{ cr.challengerName }} challenged {{ cr.challengedPlayerName }}
+          </div>
+          <div class="cr-cards">
+            Revealed:
+            @for (card of cr.revealedCards; track $index) {
+              <span class="revealed-card" [class.red]="card.isRed">{{ card.rankSymbol }}{{ card.suitSymbol }}</span>
+            }
+          </div>
+          <div class="cr-loser">{{ cr.loserName }} picks up {{ cr.pileSize }} cards</div>
+        </div>
+      }
+
+      <!-- Challenge button -->
+      @if (gameService.canChallenge()) {
+        <button class="btn btn-danger btn-lg challenge-btn animate-pulse" (click)="challenge()">
+          🔥 BLUFF! ({{ gameService.challengeTimeRemaining() }}s)
+        </button>
+      }
+
+      <!-- Turn indicator -->
+      <div class="turn-indicator">
+        @if (state.winnerId) {
+          <!-- Game over handled below -->
+        } @else if (gameService.isMyTurn()) {
+          <span class="your-turn">🎯 Your turn!</span>
+          @if (gameService.turnTimeRemaining() > 0) {
+            <span class="timer">({{ gameService.turnTimeRemaining() }}s)</span>
+          }
+        } @else {
+          <span>Waiting for {{ currentPlayerName() }}...</span>
+        }
+      </div>
+    </div>
+
+    <!-- ── Your hand + controls ────────────────────────────────────── -->
+    @if (!state.winnerId) {
+      <div class="hand-section">
+        <div class="hand-label">Your Hand ({{ state.hand.length }} cards)</div>
+        <div class="hand-container">
+          @for (card of state.hand; track $index) {
+            <app-card
+              [card]="card"
+              [selected]="isSelected($index)"
+              [selectable]="gameService.isMyTurn() && state.phase === 'PlayCards'"
+              (cardClick)="toggleCard($index)"
+            />
+          }
+          @if (state.hand.length === 0) {
+            <div class="empty-hand">No cards — you win! 🎉</div>
+          }
+        </div>
+
+        <!-- Play controls -->
+        @if (gameService.isMyTurn() && state.phase === 'PlayCards') {
+          <div class="play-controls animate-fade-in">
+            <div class="controls-row">
+              <label>Claim rank:</label>
+              <select [ngModel]="selectedRank()" (ngModelChange)="selectedRank.set($event)">
+                <option value="">Select rank...</option>
+                @for (rank of ranks; track rank) {
+                  <option [value]="rank">{{ rank }}</option>
+                }
+              </select>
+              <button class="btn btn-primary" (click)="play()" [disabled]="!canPlay()">
+                Play {{ selectedIndices().size }} card{{ selectedIndices().size !== 1 ? 's' : '' }}
+              </button>
+            </div>
+            <div class="controls-hint">
+              Select 1–4 cards, choose the rank you claim, then play.
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Game over overlay ───────────────────────────────────────── -->
+    @if (gameService.gameOverInfo(); as info) {
+      <div class="game-over-overlay animate-fade-in">
+        <div class="game-over-card">
+          <div class="go-emoji">{{ gameService.didIWin() ? '🏆' : '😔' }}</div>
+          <h2>{{ gameService.didIWin() ? 'You Win!' : info.winnerName + ' Wins!' }}</h2>
+          <p>{{ gameService.didIWin() ? 'Congratulations!' : 'Better luck next time!' }}</p>
+          <button class="btn btn-primary btn-lg" (click)="leaveRoom()">Back to Lobby</button>
+        </div>
+      </div>
+    }
+  </div>
+}

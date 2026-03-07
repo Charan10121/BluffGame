@@ -1,0 +1,70 @@
+@if (room) {
+  <div class="waiting-room">
+    <header class="room-header">
+      <h1>{{ room.name }}</h1>
+      <div class="room-code" (click)="copyRoomCode()" title="Click to copy">
+        <span class="code-label">Room Code:</span>
+        <span class="code-value">{{ room.id }}</span>
+        <span class="copy-hint">📋</span>
+      </div>
+    </header>
+
+    <section class="players-section">
+      <h2>Players ({{ room.players.length }})</h2>
+      <div class="player-list">
+        @for (player of room.players; track player.id) {
+          <div class="player-row" [class.is-host]="player.id === room.hostPlayerId">
+            <div class="player-avatar" [class.bot]="player.isBot">
+              {{ player.isBot ? '🤖' : '👤' }}
+            </div>
+            <div class="player-info">
+              <span class="player-name">{{ player.name }}</span>
+              @if (player.id === room.hostPlayerId) {
+                <span class="host-tag">HOST</span>
+              }
+              @if (player.isBot) {
+                <span class="bot-tag">BOT</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h3>Settings</h3>
+      <div class="settings-grid">
+        <div class="setting">
+          <span class="label">Max Players</span>
+          <span class="value">{{ room.settings.maxPlayers }}</span>
+        </div>
+        <div class="setting">
+          <span class="label">AI Bots</span>
+          <span class="value">{{ room.settings.botCount }}</span>
+        </div>
+        <div class="setting">
+          <span class="label">Difficulty</span>
+          <span class="value">{{ room.settings.botDifficulty }}</span>
+        </div>
+        <div class="setting">
+          <span class="label">Turn Time</span>
+          <span class="value">{{ room.settings.turnTimeoutSeconds }}s</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      @if (gameService.isHost()) {
+        <button class="btn btn-primary btn-lg" (click)="startGame()" [disabled]="!canStart">
+          🎴 Start Game
+        </button>
+        @if (!canStart) {
+          <p class="hint">Need at least 2 players to start.</p>
+        }
+      } @else {
+        <p class="hint">Waiting for the host to start the game...</p>
+      }
+      <button class="btn btn-outline btn-sm" (click)="leaveRoom()">Leave Room</button>
+    </div>
+  </div>
+}

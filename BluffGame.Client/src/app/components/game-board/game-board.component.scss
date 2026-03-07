@@ -1,0 +1,341 @@
+.game-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 32px 16px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ── Opponents row ────────────────────────────────────────────────── */
+
+.opponents-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.opponent-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 100px;
+  transition: all var(--transition);
+
+  &.active {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.2);
+  }
+
+  &.disconnected {
+    opacity: 0.5;
+  }
+
+  &.won {
+    border-color: var(--accent);
+  }
+}
+
+.opp-avatar {
+  font-size: 1.4rem;
+}
+
+.opp-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opp-cards {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.opp-status {
+  font-size: 0.65rem;
+  color: var(--danger);
+}
+
+.win-badge {
+  font-size: 0.9rem;
+}
+
+/* ── Center area ──────────────────────────────────────────────────── */
+
+.center-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-table);
+  border-radius: var(--radius-lg);
+  border: 2px solid rgba(255, 255, 255, 0.05);
+  min-height: 260px;
+  position: relative;
+}
+
+/* Pile */
+.pile-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pile-stack {
+  position: relative;
+  width: 80px;
+  height: 110px;
+}
+
+.pile-card {
+  position: absolute;
+  width: 70px;
+  height: 100px;
+  background: linear-gradient(135deg, #1e3a5f, #0f2440);
+  border: 2px solid #2a5a8f;
+  border-radius: 8px;
+  left: 5px;
+  top: 5px;
+  box-shadow: var(--shadow);
+
+  &::after {
+    content: '🃏';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    opacity: 0.4;
+  }
+}
+
+.pile-empty {
+  width: 70px;
+  height: 100px;
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.pile-count {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Claim display */
+.claim-display {
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+
+  .claim-player {
+    font-weight: 700;
+    color: var(--accent-gold);
+  }
+
+  .claim-detail {
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+/* Challenge result */
+.challenge-result {
+  padding: 14px 24px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius);
+  text-align: center;
+
+  &.was-bluff {
+    border-color: var(--accent);
+  }
+
+  .cr-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .cr-detail {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .cr-cards {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .revealed-card {
+    padding: 4px 8px;
+    background: white;
+    color: var(--suit-black);
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.9rem;
+
+    &.red {
+      color: var(--suit-red);
+    }
+  }
+
+  .cr-loser {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+/* Challenge button */
+.challenge-btn {
+  font-size: 1.1rem;
+  padding: 14px 32px;
+}
+
+/* Turn indicator */
+.turn-indicator {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .your-turn {
+    font-weight: 700;
+    color: var(--accent-gold);
+    font-size: 1rem;
+  }
+
+  .timer {
+    color: var(--text-muted);
+  }
+}
+
+/* ── Hand section ─────────────────────────────────────────────────── */
+
+.hand-section {
+  margin-top: 20px;
+}
+
+.hand-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.hand-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  padding: 12px;
+  background: var(--bg-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  min-height: 120px;
+}
+
+.empty-hand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1.1rem;
+  width: 100%;
+  padding: 20px;
+}
+
+/* Play controls */
+.play-controls {
+  margin-top: 14px;
+  padding: 14px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  label {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  select {
+    min-width: 140px;
+  }
+}
+
+.controls-hint {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Game over overlay ────────────────────────────────────────────── */
+
+.game-over-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.game-over-card {
+  text-align: center;
+  padding: 48px 40px;
+  background: var(--bg-surface);
+  border: 2px solid var(--accent-gold);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+
+  .go-emoji {
+    font-size: 4rem;
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+}

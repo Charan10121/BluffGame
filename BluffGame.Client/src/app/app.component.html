@@ -1,0 +1,18 @@
+<div class="app-shell">
+  <!-- Connection indicator -->
+  <div class="connection-bar" [class.connected]="gameService.isConnected()">
+    <span class="dot"></span>
+    {{ gameService.isConnected() ? 'Connected' : 'Connecting...' }}
+  </div>
+
+  <router-outlet />
+
+  <!-- Toast notifications -->
+  @if (gameService.notifications().length > 0) {
+    <div class="toast-container">
+      @for (note of gameService.notifications(); track note) {
+        <div class="toast animate-fade-in">{{ note }}</div>
+      }
+    </div>
+  }
+</div>

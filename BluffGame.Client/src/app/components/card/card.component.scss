@@ -1,0 +1,97 @@
+:host {
+  display: inline-block;
+}
+
+.card {
+  width: 64px;
+  height: 92px;
+  border-radius: 8px;
+  position: relative;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  font-family: 'Courier New', 'Courier', monospace;
+}
+
+/* ── Face up ──────────────────────────────────────────────────────── */
+
+.face-up {
+  background: var(--bg-card);
+  border: 2px solid #d1d5db;
+  color: var(--suit-black);
+  cursor: default;
+
+  &.red {
+    color: var(--suit-red);
+  }
+
+  &.selectable {
+    cursor: pointer;
+
+    &:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  &.selected {
+    transform: translateY(-10px);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4), 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-weight: 700;
+
+  .rank {
+    font-size: 0.85rem;
+  }
+
+  .suit {
+    font-size: 0.65rem;
+  }
+}
+
+.top-left {
+  top: 4px;
+  left: 5px;
+}
+
+.bottom-right {
+  bottom: 4px;
+  right: 5px;
+  transform: rotate(180deg);
+}
+
+.card-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .suit-large {
+    font-size: 1.6rem;
+    opacity: 0.85;
+  }
+}
+
+/* ── Face down ────────────────────────────────────────────────────── */
+
+.face-down {
+  background: linear-gradient(135deg, #1e3a5f, #0f2440);
+  border: 2px solid #2a5a8f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .back-pattern {
+    font-size: 1.8rem;
+    opacity: 0.3;
+  }
+}

@@ -1,0 +1,98 @@
+<div class="lobby-page">
+  <header class="hero">
+    <h1>🃏 BLUFF</h1>
+    <p class="subtitle">The classic card game of deception</p>
+  </header>
+
+  <!-- Name Entry -->
+  @if (needsName) {
+    <section class="name-entry animate-fade-in">
+      <h2>What's your name?</h2>
+      <div class="name-form">
+        <input
+          type="text"
+          [(ngModel)]="nameInput"
+          placeholder="Enter your name..."
+          maxlength="20"
+          (keyup.enter)="submitName()"
+          autofocus
+        />
+        <button class="btn btn-primary" (click)="submitName()" [disabled]="!nameInput.trim()">
+          Let's Play
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- Lobby Content -->
+  @if (!needsName) {
+    <section class="lobby-content animate-fade-in">
+      <div class="lobby-header">
+        <h2>Welcome, {{ gameService.playerName() }}!</h2>
+        <div class="lobby-actions">
+          <button class="btn btn-outline btn-sm" (click)="refresh()">🔄 Refresh</button>
+          <button class="btn btn-primary" (click)="toggleCreateForm()">
+            {{ showCreateForm() ? '✕ Cancel' : '+ Create Room' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Create Room Form -->
+      @if (showCreateForm()) {
+        <div class="create-form animate-fade-in">
+          <h3>Create a New Room</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Room Name</label>
+              <input type="text" [(ngModel)]="roomName" [placeholder]="gameService.playerName() + '\'s Room'" maxlength="30" />
+            </div>
+            <div class="form-group">
+              <label>Max Players: {{ maxPlayers }}</label>
+              <input type="range" min="2" max="6" step="1" [(ngModel)]="maxPlayers" (ngModelChange)="onMaxPlayersChange()" />
+            </div>
+            <div class="form-group">
+              <label>AI Bots: {{ botCount }}</label>
+              <input type="range" min="0" [max]="maxBots" step="1" [(ngModel)]="botCount" />
+            </div>
+            <div class="form-group">
+              <label>Bot Difficulty</label>
+              <select [(ngModel)]="botDifficulty">
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" (click)="createRoom()">Create Room</button>
+        </div>
+      }
+
+      <!-- Room List -->
+      <div class="room-list">
+        <h3>Open Rooms</h3>
+        @if (gameService.rooms().length === 0) {
+          <div class="empty-state">
+            <p>No rooms available. Create one to get started!</p>
+          </div>
+        } @else {
+          <div class="room-grid">
+            @for (room of gameService.rooms(); track room.id) {
+              <div class="room-card animate-fade-in">
+                <div class="room-info">
+                  <h4>{{ room.name }}</h4>
+                  <div class="room-meta">
+                    <span class="badge">👤 {{ room.playerCount }}/{{ room.maxPlayers - room.botCount }}</span>
+                    @if (room.botCount > 0) {
+                      <span class="badge bot-badge">🤖 {{ room.botCount }} bots</span>
+                    }
+                    <span class="badge host-badge">Host: {{ room.hostName }}</span>
+                  </div>
+                </div>
+                <button class="btn btn-primary btn-sm" (click)="joinRoom(room.id)">Join</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

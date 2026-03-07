@@ -1,0 +1,26 @@
+@if (faceDown) {
+  <div class="card face-down">
+    <span class="back-pattern">🃏</span>
+  </div>
+} @else {
+  <div
+    class="card face-up"
+    [class.red]="card.isRed"
+    [class.selected]="selected"
+    [class.selectable]="selectable"
+    (click)="onClick()"
+    [title]="card.display"
+  >
+    <div class="card-corner top-left">
+      <span class="rank">{{ card.rankSymbol }}</span>
+      <span class="suit">{{ card.suitSymbol }}</span>
+    </div>
+    <div class="card-center">
+      <span class="suit-large">{{ card.suitSymbol }}</span>
+    </div>
+    <div class="card-corner bottom-right">
+      <span class="rank">{{ card.rankSymbol }}</span>
+      <span class="suit">{{ card.suitSymbol }}</span>
+    </div>
+  </div>
+}

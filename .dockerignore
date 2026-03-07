@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/bin
+**/obj
+**/.git
+**/.gitignore
+**/.vscode
+**/.angular
+**/README.md
+**/*.md
