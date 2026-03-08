@@ -1,39 +1,48 @@
-# 🃏 Bluff – Real-Time Multiplayer Card Game
 
-A real-time multiplayer implementation of the classic card game **Bluff** (also known as *Cheat* or *BS*), built with **ASP.NET Core + SignalR** backend and **Angular** frontend.
-**Live Demo:** https://bluff-the-card-game-fe5n.onrender.com/
+# 🃏 Bluff — Real-Time Multiplayer Card Game
 
+[Live Demo](https://bluff-the-card-game-fe5n.onrender.com/)
 
-## Features
+A real-time multiplayer implementation of the classic card game **Bluff** (also known as *Cheat* or *BS*), built with **ASP.NET Core + SignalR** and **Angular**.
 
-- **Real-time multiplayer** via WebSockets (SignalR)
-- **AI bots** with Easy and Medium difficulty strategies
-- **Lobby system** – create rooms, share with friends, or fill with bots
-- **Google OAuth 2.0** authentication with JWT-secured connections
-- **Reconnection handling** – rejoin games after brief disconnections
-- **Reconnection handling** – rejoin games after disconnection
-- **Server-authoritative** – all game logic runs on the server to prevent cheating
+Play with friends or against AI bots — bluff your way to victory!
 
-## Tech Stack
+## ✨ Features
+
+- **Real-time multiplayer** — WebSocket-powered via SignalR with automatic reconnection
+- **AI bots** — Easy and Medium difficulty strategies with humanised play delays
+- **Google Sign-In** — OAuth 2.0 authentication (dev login available for local testing)
+- **Lobby system** — create rooms, set player counts, add bots, share room codes
+- **Hybrid play** — any mix of human players and bots (2–6 players per room)
+- **Reconnection handling** — rejoin in-progress games after disconnection
+- **Server-authoritative** — all game logic runs server-side to prevent cheating
+- **Turn timers** — 30-second turn timeout with auto-pass
+- **Responsive dark-themed UI** — casino-style green table design
+
+## 🎮 Game Rules
+
+1. A **54-card deck** (standard 52 + 2 Jokers) is dealt evenly among all players
+2. On your turn, select any number of cards, place them face-down, and **claim** a rank (e.g. "3 Kings")
+3. **Round lock** — once a rank is claimed, all subsequent plays in that round must claim the same rank (or pass)
+4. **Jokers are wild** — they always count as matching the claimed rank
+5. After each play, other players have a **10-second window** to call **"Bluff!"**
+6. If challenged:
+   - **Was a bluff** → the player who played picks up the entire pile
+   - **Was truthful** → the challenger picks up the pile
+   - The challenge winner starts the next round
+7. If everyone passes, the pile is cleared and a new round begins
+8. **First player to empty their hand wins!**
+
+## 🛠 Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Angular 18, TypeScript, SCSS |
 | Backend | ASP.NET Core 8, C#, SignalR |
-| Real-time | SignalR (WebSocket + fallback) |
-| Hosting | Render.com (Docker, free tier) |
+| Auth | Google OAuth 2.0, JWT |
+| Deployment | Docker, Render.com |
 
-## Game Rules
-2. On your turn, place 1–4 cards face-down and claim a rank (e.g., "2 Kings")
-1. A standard 52-card deck is dealt evenly among all players
-2. On your turn, place 1–4 cards face-down and **claim** a rank (e.g., "2 Kings")
-3. Other players have a window to **challenge** ("Bluff!") your claim
-4. If challenged:
-   - **Was a bluff** → you pick up the entire pile
-   - **Was truthful** → the challenger picks up the pile
-5. First player to empty their hand **wins**
-
-**Requirements:** .NET 8 SDK, Node.js 20+
+## 🚀 Local Development
 
 **Setup environment variables:**
 ```bash
@@ -42,37 +51,69 @@ export GOOGLE_CLIENT_ID="your-oauth-client-id"
 export JWT_SECRET="your-secret-key-min-32-chars"
 ```
 - [Node.js 20+](https://nodejs.org/)
-**Backend:**
 
-### Run the backend
+### Run
 
 ```bash
+# Terminal 1 — Backend
 cd BluffGame.Server
 dotnet run
-Runs at http://localhost:5000
+# → http://localhost:5000
 
-**Frontend:**
-
-### Run the frontend (dev server)
-
-```bash
+# Terminal 2 — Frontend
 cd BluffGame.Client
 npm install
 npm start
-Runs at http://localhost:4200 (proxies `/api` and `/gamehub` to backend)
+# → http://localhost:4200 (proxied to backend)
+```
 
-Angular dev server starts at `http://localhost:4200` with proxy to the backend.
+In development mode a **Dev Login** is available — no Google credentials required.
 
-### Docker (full build)
+### Docker
 
 ```bash
 docker build -t bluff-game .
 docker run -p 10000:10000 bluff-game
-Runs at http://localhost:10000
+# → http://localhost:10000
+```
 
-Open `http://localhost:10000`.
+### Environment Variables
 
-Push to GitHub and connect on [Render Dashboard](https://dashboard.render.com/). Auto-detects `render.yaml` and deploys via Docker.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_CLIENT_ID` | Production | Google OAuth 2.0 client ID |
+| `JWT_SECRET` | Production | Signing key for app JWTs (min 32 chars) |
+| `ASPNETCORE_ENVIRONMENT` | — | Set to `Production` for deployed builds |
 
+> A dev fallback JWT secret is used automatically in Development mode.
 
-MIT
+## 🌐 Deployment
+
+Configured for one-click deployment on [Render.com](https://render.com):
+
+1. Push to GitHub
+2. Connect the repo on the [Render Dashboard](https://dashboard.render.com/)
+3. Set `GOOGLE_CLIENT_ID` and `JWT_SECRET` environment variables
+4. Render auto-detects `render.yaml` and deploys
+
+**Keep-alive** (free tier): use [cron-job.org](https://cron-job.org) to ping `https://<your-app>.onrender.com/health` every 14 minutes.
+
+## 📁 Project Structure
+
+```
+BluffGame/
+├── BluffGame.Server/           # ASP.NET Core backend
+│   ├── AI/                     # Bot strategies (Easy, Medium)
+│   ├── Auth/                   # Google OAuth, JWT, rate limiting
+│   ├── Game/                   # Game engine & deck logic
+│   ├── Hubs/                   # SignalR hub & client contract
+│   ├── Models/                 # Domain models, DTOs, enums
+│   └── Services/               # Room manager, game coordinator, cleanup
+├── BluffGame.Client/           # Angular 18 frontend
+│   └── src/app/
+│       ├── components/         # Login, Lobby, Room, Game Board, Card
+│       ├── models/             # TypeScript interfaces
+│       └── services/           # Auth, SignalR, Game state
+├── Dockerfile                  # Multi-stage build (Node → .NET → runtime)
+└── render.yaml                 # Render.com deployment config
+```
