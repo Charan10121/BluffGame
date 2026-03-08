@@ -47,7 +47,6 @@ export class GameBoardComponent {
       this.gameService.isMyTurn() &&
       state?.phase === 'PlayCards' &&
       this.selectedIndices().size > 0 &&
-      this.selectedIndices().size <= 4 &&
       !!effectiveRank
     );
   });
@@ -67,7 +66,7 @@ export class GameBoardComponent {
     const current = new Set(this.selectedIndices());
     if (current.has(index)) {
       current.delete(index);
-    } else if (current.size < 4) {
+    } else {
       current.add(index);
     }
     this.selectedIndices.set(current);
