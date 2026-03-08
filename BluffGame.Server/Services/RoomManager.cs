@@ -33,6 +33,34 @@ public class RoomManager : IRoomManager
         return session;
     }
 
+    /// <summary>
+    /// Register a player with a known PlayerId (from JWT).
+    /// If a session already exists for this PlayerId, update the connection mapping.
+    /// </summary>
+    public PlayerSession RegisterOrUpdatePlayer(string connectionId, string playerId, string playerName)
+    {
+        if (_sessionsByPlayerId.TryGetValue(playerId, out var existing))
+        {
+            // Remove old connection mapping
+            _sessionsByConnection.TryRemove(existing.ConnectionId, out _);
+            existing.ConnectionId = connectionId;
+            existing.PlayerName = playerName;
+            _sessionsByConnection[connectionId] = existing;
+            return existing;
+        }
+
+        var session = new PlayerSession
+        {
+            PlayerId = playerId,
+            PlayerName = playerName,
+            ConnectionId = connectionId
+        };
+
+        _sessionsByConnection[connectionId] = session;
+        _sessionsByPlayerId[playerId] = session;
+        return session;
+    }
+
     public PlayerSession? GetSessionByConnectionId(string connectionId) =>
         _sessionsByConnection.GetValueOrDefault(connectionId);
 

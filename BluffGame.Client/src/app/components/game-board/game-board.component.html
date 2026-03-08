@@ -1,6 +1,11 @@
 @if (gameState(); as state) {
   <div class="game-board">
 
+    <!-- ── Exit button ─────────────────────────────────────────────── -->
+    @if (!state.winnerId) {
+      <button class="btn btn-outline btn-sm exit-btn" (click)="confirmExit()">✕ Exit</button>
+    }
+
     <!-- ── Opponents ───────────────────────────────────────────────── -->
     <div class="opponents-row">
       @for (opp of opponents(); track opp.id) {
@@ -106,19 +111,28 @@
         @if (gameService.isMyTurn() && state.phase === 'PlayCards') {
           <div class="play-controls animate-fade-in">
             <div class="controls-row">
-              <label>Claim rank:</label>
-              <select [ngModel]="selectedRank()" (ngModelChange)="selectedRank.set($event)">
-                <option value="">Select rank...</option>
-                @for (rank of ranks; track rank) {
-                  <option [value]="rank">{{ rank }}</option>
-                }
-              </select>
+              @if (state.roundClaimedRank) {
+                <span class="round-rank-lock">Round rank: <strong>{{ state.roundClaimedRank }}</strong></span>
+              } @else {
+                <label for="claim-rank-select">Claim rank:</label>
+                <select id="claim-rank-select" [ngModel]="selectedRank()" (ngModelChange)="selectedRank.set($event)">
+                  <option value="">Select rank...</option>
+                  @for (rank of ranks; track rank) {
+                    <option [value]="rank">{{ rank }}</option>
+                  }
+                </select>
+              }
               <button class="btn btn-primary" (click)="play()" [disabled]="!canPlay()">
                 Play {{ selectedIndices().size }} card{{ selectedIndices().size !== 1 ? 's' : '' }}
               </button>
+              <button class="btn btn-outline" (click)="pass()">Pass</button>
             </div>
             <div class="controls-hint">
-              Select 1–4 cards, choose the rank you claim, then play.
+              @if (state.roundClaimedRank) {
+                This round is locked to {{ state.roundClaimedRank }}. Play that rank or pass.
+              } @else {
+                Select 1–4 cards, choose a rank to start the round, then play. Others must follow that rank or pass.
+              }
             </div>
           </div>
         }
@@ -133,6 +147,20 @@
           <h2>{{ gameService.didIWin() ? 'You Win!' : info.winnerName + ' Wins!' }}</h2>
           <p>{{ gameService.didIWin() ? 'Congratulations!' : 'Better luck next time!' }}</p>
           <button class="btn btn-primary btn-lg" (click)="leaveRoom()">Back to Lobby</button>
+        </div>
+      </div>
+    }
+
+    <!-- ── Exit confirmation dialog ────────────────────────────────── -->
+    @if (showExitConfirm()) {
+      <div class="exit-confirm-overlay animate-fade-in">
+        <div class="exit-confirm-card">
+          <h2>Leave Game?</h2>
+          <p>Are you sure you want to exit? You will lose your current game progress.</p>
+          <div class="exit-confirm-actions">
+            <button class="btn btn-danger" (click)="leaveRoom()">Yes, Leave</button>
+            <button class="btn btn-outline" (click)="cancelExit()">Cancel</button>
+          </div>
         </div>
       </div>
     }

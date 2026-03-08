@@ -4,44 +4,15 @@
   flex-direction: column;
 }
 
-.connection-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--warning);
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  transition: color var(--transition);
-
-  &.connected {
-    color: var(--accent);
-  }
-
-  .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-}
-
 .toast-container {
   position: fixed;
-  top: 28px;
-  right: 16px;
+  top: 96px;
+  right: 5px;
   z-index: 99;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 360px;
+  max-width: 320px;
 }
 
 .toast {
@@ -51,4 +22,51 @@
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   box-shadow: var(--shadow-lg);
+  word-wrap: break-word;
+}
+
+/* ── Reconnect prompt overlay ─────────────────────────────────────── */
+
+.reconnect-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.reconnect-card {
+  text-align: center;
+  padding: 48px 40px;
+  background: var(--bg-surface);
+  border: 2px solid var(--accent-gold);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 420px;
+
+  .reconnect-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+}
+
+.reconnect-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }

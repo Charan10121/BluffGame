@@ -6,6 +6,7 @@ namespace BluffGame.Server.Services;
 public interface IRoomManager
 {
     PlayerSession RegisterPlayer(string connectionId, string playerName);
+    PlayerSession RegisterOrUpdatePlayer(string connectionId, string playerId, string playerName);
     PlayerSession? GetSessionByConnectionId(string connectionId);
     PlayerSession? GetSessionByPlayerId(string playerId);
     void UpdateConnectionId(string playerId, string newConnectionId);

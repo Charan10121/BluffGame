@@ -1,9 +1,6 @@
 <div class="app-shell">
-  <!-- Connection indicator -->
-  <div class="connection-bar" [class.connected]="gameService.isConnected()">
-    <span class="dot"></span>
-    {{ gameService.isConnected() ? 'Connected' : 'Connecting...' }}
-  </div>
+  <!-- User profile menu -->
+  <app-user-profile />
 
   <router-outlet />
 
@@ -13,6 +10,25 @@
       @for (note of gameService.notifications(); track note) {
         <div class="toast animate-fade-in">{{ note }}</div>
       }
+    </div>
+  }
+
+  <!-- Reconnect prompt -->
+  @if (gameService.showReconnectPrompt()) {
+    <div class="reconnect-overlay animate-fade-in">
+      <div class="reconnect-card">
+        <div class="reconnect-icon">🎴</div>
+        <h2>Welcome Back!</h2>
+        <p>You were in a game room. Would you like to rejoin?</p>
+        <div class="reconnect-actions">
+          <button class="btn btn-primary btn-lg" (click)="gameService.acceptReconnect()">
+            Rejoin Game
+          </button>
+          <button class="btn btn-outline" (click)="gameService.declineReconnect()">
+            No Thanks
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>

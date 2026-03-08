@@ -26,6 +26,7 @@ export interface PlayerGameView {
   roomId: string;
   hand: CardDto[];
   pileCount: number;
+  roundClaimedRank: string | null;
   lastClaim: ClaimDto | null;
   players: PlayerViewDto[];
   currentPlayerId: string | null;
@@ -102,6 +103,7 @@ export interface PlayCardsRequest {
 
 export interface ReconnectResult {
   success: boolean;
+  playerId: string | null;
   room: RoomDetails | null;
   gameState: PlayerGameView | null;
 }

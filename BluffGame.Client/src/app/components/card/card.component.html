@@ -6,6 +6,7 @@
   <div
     class="card face-up"
     [class.red]="card.isRed"
+    [class.joker]="card.rank === 'Joker'"
     [class.selected]="selected"
     [class.selectable]="selectable"
     (click)="onClick()"
@@ -13,14 +14,22 @@
   >
     <div class="card-corner top-left">
       <span class="rank">{{ card.rankSymbol }}</span>
-      <span class="suit">{{ card.suitSymbol }}</span>
+      @if (card.rank !== 'Joker') {
+        <span class="suit">{{ card.suitSymbol }}</span>
+      }
     </div>
     <div class="card-center">
-      <span class="suit-large">{{ card.suitSymbol }}</span>
+      @if (card.rank === 'Joker') {
+        <span class="joker-icon">🃏</span>
+      } @else {
+        <span class="suit-large">{{ card.suitSymbol }}</span>
+      }
     </div>
     <div class="card-corner bottom-right">
       <span class="rank">{{ card.rankSymbol }}</span>
-      <span class="suit">{{ card.suitSymbol }}</span>
+      @if (card.rank !== 'Joker') {
+        <span class="suit">{{ card.suitSymbol }}</span>
+      }
     </div>
   </div>
 }

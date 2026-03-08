@@ -17,6 +17,7 @@ export class GameBoardComponent {
 
   selectedIndices = signal<Set<number>>(new Set());
   selectedRank = signal<string>('');
+  showExitConfirm = signal(false);
   ranks = RANKS;
   Math = Math; // expose to template
 
@@ -39,12 +40,22 @@ export class GameBoardComponent {
   });
 
   canPlay = computed(() => {
+    const state = this.gameState();
+    const effectiveRank = state?.roundClaimedRank ?? this.selectedRank();
+
     return (
       this.gameService.isMyTurn() &&
-      this.gameState()?.phase === 'PlayCards' &&
+      state?.phase === 'PlayCards' &&
       this.selectedIndices().size > 0 &&
       this.selectedIndices().size <= 4 &&
-      !!this.selectedRank()
+      !!effectiveRank
+    );
+  });
+
+  canPass = computed(() => {
+    return (
+      this.gameService.isMyTurn() &&
+      this.gameState()?.phase === 'PlayCards'
     );
   });
 
@@ -70,11 +81,17 @@ export class GameBoardComponent {
 
   async play(): Promise<void> {
     if (!this.canPlay()) return;
+
+    const state = this.gameState();
+    const effectiveRank = state?.roundClaimedRank ?? this.selectedRank();
+    if (!effectiveRank) return;
+
     const indices = [...this.selectedIndices()];
-    const rank = this.selectedRank();
     this.selectedIndices.set(new Set());
-    this.selectedRank.set('');
-    await this.gameService.playCards(indices, rank);
+    if (!state?.roundClaimedRank) {
+      this.selectedRank.set('');
+    }
+    await this.gameService.playCards(indices, effectiveRank);
   }
 
   async challenge(): Promise<void> {
@@ -82,7 +99,21 @@ export class GameBoardComponent {
     await this.gameService.challenge();
   }
 
+  async pass(): Promise<void> {
+    if (!this.canPass()) return;
+    await this.gameService.pass();
+  }
+
+  confirmExit(): void {
+    this.showExitConfirm.set(true);
+  }
+
+  cancelExit(): void {
+    this.showExitConfirm.set(false);
+  }
+
   async leaveRoom(): Promise<void> {
+    this.showExitConfirm.set(false);
     await this.gameService.leaveRoom();
   }
 

@@ -1,7 +1,9 @@
+using System.Security.Claims;
 using BluffGame.Server.Game;
 using BluffGame.Server.Models;
 using BluffGame.Server.Models.DTOs;
 using BluffGame.Server.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace BluffGame.Server.Hubs;
@@ -9,7 +11,9 @@ namespace BluffGame.Server.Hubs;
 /// <summary>
 /// Central SignalR hub — handles all client↔server communication.
 /// Delegates game logic to GameCoordinator; room/session logic to RoomManager.
+/// Kept thin: transport + identity extraction only. All rules live in Engine/Coordinator.
 /// </summary>
+[Authorize]
 public class GameHub : Hub<IGameClient>
 {
     private readonly IRoomManager _rooms;
@@ -29,50 +33,64 @@ public class GameHub : Hub<IGameClient>
         _logger = logger;
     }
 
+    // ── Identity helpers ─────────────────────────────────────────────────
+
+    /// <summary>Extract the stable PlayerId from JWT claims.</summary>
+    private string GetAuthenticatedPlayerId() =>
+        Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        ?? throw new HubException("Authentication required.");
+
+    private string GetAuthenticatedName() =>
+        Context.User?.FindFirst(ClaimTypes.Name)?.Value ?? "Unknown";
+
     // ── Identity ─────────────────────────────────────────────────────────
 
-    /// <summary>Register a new player. Returns their unique player ID.</summary>
+    /// <summary>Register/re-register the authenticated player for this connection.</summary>
     public Task<string> SetPlayerInfo(string name)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new HubException("Name is required.");
+        var playerId = GetAuthenticatedPlayerId();
+        var displayName = string.IsNullOrWhiteSpace(name) ? GetAuthenticatedName() : name.Trim();
 
-        var session = _rooms.RegisterPlayer(Context.ConnectionId, name.Trim());
+        var session = _rooms.RegisterOrUpdatePlayer(Context.ConnectionId, playerId, displayName);
         _logger.LogInformation("Player registered: {Name} ({PlayerId})", session.PlayerName, session.PlayerId);
         return Task.FromResult(session.PlayerId);
     }
 
-    /// <summary>Attempt to reconnect with a previously assigned player ID.</summary>
+    /// <summary>Attempt to reconnect with the authenticated player's identity.</summary>
     public async Task<ReconnectResult> AttemptReconnect(string playerId, string name)
     {
-        var session = _rooms.GetSessionByPlayerId(playerId);
+        // Always use the JWT-provided PlayerId — ignore client-supplied one
+        var authPlayerId = GetAuthenticatedPlayerId();
+        var displayName = string.IsNullOrWhiteSpace(name) ? GetAuthenticatedName() : name.Trim();
+
+        var session = _rooms.GetSessionByPlayerId(authPlayerId);
 
         if (session is null)
         {
-            // Session expired — register fresh
-            session = _rooms.RegisterPlayer(Context.ConnectionId, name.Trim());
-            return new ReconnectResult { Success = false };
+            // No prior session — register fresh
+            session = _rooms.RegisterOrUpdatePlayer(Context.ConnectionId, authPlayerId, displayName);
+            return new ReconnectResult { Success = false, PlayerId = session.PlayerId };
         }
 
         // Update connection mapping
-        _rooms.UpdateConnectionId(playerId, Context.ConnectionId);
-        session.PlayerName = name.Trim();
+        _rooms.UpdateConnectionId(authPlayerId, Context.ConnectionId);
+        session.PlayerName = displayName;
 
         if (session.RoomId is null)
-            return new ReconnectResult { Success = true };
+            return new ReconnectResult { Success = true, PlayerId = authPlayerId };
 
         var room = _rooms.GetRoom(session.RoomId);
         if (room is null)
         {
             session.RoomId = null;
-            return new ReconnectResult { Success = true };
+            return new ReconnectResult { Success = true, PlayerId = authPlayerId };
         }
 
         // Rejoin SignalR group
         await Groups.AddToGroupAsync(Context.ConnectionId, room.Id);
 
         // Mark player as reconnected
-        var player = room.Players.Find(p => p.Id == playerId);
+        var player = room.Players.Find(p => p.Id == authPlayerId);
         if (player is not null)
         {
             player.IsConnected = true;
@@ -86,11 +104,12 @@ public class GameHub : Hub<IGameClient>
         PlayerGameView? gameState = null;
 
         if (room.Status == RoomStatus.Playing && room.GameState is not null)
-            gameState = _engine.GetPlayerView(room, playerId);
+            gameState = _engine.GetPlayerView(room, authPlayerId);
 
         return new ReconnectResult
         {
             Success = true,
+            PlayerId = authPlayerId,
             Room = details,
             GameState = gameState
         };
@@ -160,18 +179,8 @@ public class GameHub : Hub<IGameClient>
         var session = GetRequiredSession();
         var room = GetRequiredRoom(session);
 
-        if (room.HostPlayerId != session.PlayerId)
-            throw new HubException("Only the host can start the game.");
-
-        if (room.Status != RoomStatus.Waiting)
-            throw new HubException("Game has already started.");
-
-        if (room.Players.Count < 2)
-            throw new HubException("Need at least 2 players to start.");
-
-        _logger.LogInformation("Game started in room {RoomId}", room.Id);
-
-        await _coordinator.StartGameAsync(room);
+        // All validation delegated to coordinator
+        await _coordinator.StartGameAsync(room, session.PlayerId);
         await Clients.Group(room.Id).Notification("🎴 Game started! Good luck!");
         await BroadcastLobbyUpdate();
     }
@@ -181,9 +190,7 @@ public class GameHub : Hub<IGameClient>
         var session = GetRequiredSession();
         var room = GetRequiredRoom(session);
 
-        if (room.Status != RoomStatus.Playing || room.GameState is null)
-            throw new HubException("Game is not in progress.");
-
+        // Minimal transport-level parsing; game rules enforced in coordinator/engine
         if (!Enum.TryParse<Rank>(request.ClaimedRank, true, out var rank))
             throw new HubException("Invalid rank.");
 
@@ -194,11 +201,14 @@ public class GameHub : Hub<IGameClient>
     {
         var session = GetRequiredSession();
         var room = GetRequiredRoom(session);
-
-        if (room.Status != RoomStatus.Playing || room.GameState is null)
-            throw new HubException("Game is not in progress.");
-
         await _coordinator.HandleChallengeAsync(room, session.PlayerId);
+    }
+
+    public async Task Pass()
+    {
+        var session = GetRequiredSession();
+        var room = GetRequiredRoom(session);
+        await _coordinator.HandlePassAsync(room, session.PlayerId);
     }
 
     // ── Connection lifecycle ─────────────────────────────────────────────
@@ -249,7 +259,10 @@ public class GameHub : Hub<IGameClient>
 
     private PlayerSession GetRequiredSession()
     {
-        return _rooms.GetSessionByConnectionId(Context.ConnectionId)
+        // Prefer JWT PlayerId; fall back to connection-based lookup
+        var authPlayerId = GetAuthenticatedPlayerId();
+        return _rooms.GetSessionByPlayerId(authPlayerId)
+            ?? _rooms.GetSessionByConnectionId(Context.ConnectionId)
             ?? throw new HubException("Not registered. Call SetPlayerInfo first.");
     }
 

@@ -5,6 +5,18 @@
   padding: 32px 16px 16px;
   max-width: 900px;
   margin: 0 auto;
+  position: relative;
+}
+
+/* ── Exit button ──────────────────────────────────────────────────── */
+
+.exit-btn {
+  position: absolute;
+  top: 44px;
+  right: 16px;
+  z-index: 10;
+  font-size: 0.8rem;
+  padding: 6px 14px;
 }
 
 /* ── Opponents row ────────────────────────────────────────────────── */
@@ -303,6 +315,15 @@
   color: var(--text-muted);
 }
 
+.round-rank-lock {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--accent-gold);
+  }
+}
+
 /* ── Game over overlay ────────────────────────────────────────────── */
 
 .game-over-overlay {
@@ -338,4 +359,44 @@
     color: var(--text-muted);
     margin-bottom: 24px;
   }
+}
+
+/* ── Exit confirmation overlay ────────────────────────────────────── */
+
+.exit-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.exit-confirm-card {
+  text-align: center;
+  padding: 36px 32px;
+  background: var(--bg-surface);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+
+  h2 {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+}
+
+.exit-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
 }

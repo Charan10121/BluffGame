@@ -41,8 +41,27 @@ public class GameCoordinator : IGameCoordinator
 
     // ── Public API ───────────────────────────────────────────────────────
 
-    public async Task StartGameAsync(Room room)
+    public async Task StartGameAsync(Room room, string playerId)
     {
+        // Validation — moved here from hub for single responsibility
+        if (room.HostPlayerId != playerId)
+        {
+            await SendErrorToPlayer(playerId, "Only the host can start the game.");
+            return;
+        }
+
+        if (room.Status != RoomStatus.Waiting)
+        {
+            await SendErrorToPlayer(playerId, "Game has already started.");
+            return;
+        }
+
+        if (room.Players.Count < 2)
+        {
+            await SendErrorToPlayer(playerId, "Need at least 2 players to start.");
+            return;
+        }
+
         await room.Semaphore.WaitAsync();
         try { _engine.StartGame(room); }
         finally { room.Semaphore.Release(); }
@@ -119,6 +138,42 @@ public class GameCoordinator : IGameCoordinator
 
     public void CancelAllTimers(string roomId) => CancelTimer(roomId);
 
+    public async Task HandlePassAsync(Room room, string playerId)
+    {
+        CancelTimer(room.Id);
+
+        bool success;
+        bool roundOver;
+        string error;
+
+        await room.Semaphore.WaitAsync();
+        try
+        {
+            (success, roundOver, error) = _engine.Pass(room, playerId);
+        }
+        finally { room.Semaphore.Release(); }
+
+        if (!success)
+        {
+            await SendErrorToPlayer(playerId, error);
+            return;
+        }
+
+        var player = room.Players.Find(p => p.Id == playerId);
+        await BroadcastGameStateAsync(room);
+
+        if (roundOver)
+        {
+            await NotifyRoom(room.Id, "Everyone passed! Pile cleared. New round starting.");
+        }
+        else
+        {
+            await NotifyRoom(room.Id, $"{player?.Name} passed.");
+        }
+
+        await BeginCurrentTurnAsync(room);
+    }
+
     // ── Challenge window ─────────────────────────────────────────────────
 
     private async Task RunChallengeWindowAsync(Room room)
@@ -185,6 +240,15 @@ public class GameCoordinator : IGameCoordinator
     {
         var currentPlayer = room.Players[room.GameState!.CurrentPlayerIndex];
 
+        // Skip disconnected players
+        if (!currentPlayer.IsConnected)
+        {
+            await NotifyRoom(room.Id, $"⏭️ Skipping {currentPlayer.Name} (disconnected).");
+            await Task.Delay(800); // Brief pause so players see the skip message
+            await AdvanceAndContinueAsync(room);
+            return;
+        }
+
         if (currentPlayer.Type == PlayerType.Bot)
         {
             _ = RunBotPlayAsync(room);
@@ -215,9 +279,40 @@ public class GameCoordinator : IGameCoordinator
             var bot = room.Players[room.GameState.CurrentPlayerIndex];
             if (bot.Type != PlayerType.Bot) return;
 
+            // Check if bot wants to pass
+            if (_botEngine.ShouldPass(bot, room.GameState, room.Players))
+            {
+                await HandlePassAsync(room, bot.Id);
+                return;
+            }
+
             var (indices, rank) = _botEngine.DecidePlay(bot, room.GameState, room.Players);
 
-            await HandlePlayCardsAsync(room, bot.Id, indices, rank);
+            // Attempt play; if it fails (e.g. rank mismatch), fall back to pass
+            CancelTimer(room.Id);
+            bool success;
+            string error;
+
+            await room.Semaphore.WaitAsync();
+            try
+            {
+                (success, error) = _engine.PlayCards(room, bot.Id, indices, rank);
+            }
+            finally { room.Semaphore.Release(); }
+
+            if (success)
+            {
+                var player = room.Players.Find(p => p.Id == bot.Id);
+                await BroadcastGameStateAsync(room);
+                await NotifyRoom(room.Id,
+                    $"{player?.Name} played {indices.Count} card(s) and claimed {rank}.");
+                _ = RunChallengeWindowAsync(room);
+            }
+            else
+            {
+                _logger.LogWarning("Bot {BotId} play failed ({Error}), falling back to pass", bot.Id, error);
+                await HandlePassAsync(room, bot.Id);
+            }
         }
         catch (Exception ex) { _logger.LogError(ex, "Bot play error in room {Id}", room.Id); }
     }
@@ -271,8 +366,9 @@ public class GameCoordinator : IGameCoordinator
             var player = room.Players[room.GameState.CurrentPlayerIndex];
             if (player.Hand.Count == 0) return;
 
-            await NotifyRoom(room.Id, $"⏰ {player.Name} ran out of time — auto-playing.");
-            await HandlePlayCardsAsync(room, player.Id, new List<int> { 0 }, player.Hand[0].Rank);
+            // Timed out — auto-pass for the human player
+            await NotifyRoom(room.Id, $"⏰ {player.Name} ran out of time — auto-passing.");
+            await HandlePassAsync(room, player.Id);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { _logger.LogError(ex, "Turn timeout error in room {Id}", room.Id); }

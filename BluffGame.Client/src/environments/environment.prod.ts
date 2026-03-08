@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  hubUrl: '/gamehub'
+  hubUrl: '/gamehub',
+  googleClientId: '570067408332-mrespr5dd7ra94qh0a9huqd1jestbh8g.apps.googleusercontent.com'
 };

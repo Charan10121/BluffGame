@@ -4,31 +4,9 @@
     <p class="subtitle">The classic card game of deception</p>
   </header>
 
-  <!-- Name Entry -->
-  @if (needsName) {
-    <section class="name-entry animate-fade-in">
-      <h2>What's your name?</h2>
-      <div class="name-form">
-        <input
-          type="text"
-          [(ngModel)]="nameInput"
-          placeholder="Enter your name..."
-          maxlength="20"
-          (keyup.enter)="submitName()"
-          autofocus
-        />
-        <button class="btn btn-primary" (click)="submitName()" [disabled]="!nameInput.trim()">
-          Let's Play
-        </button>
-      </div>
-    </section>
-  }
-
-  <!-- Lobby Content -->
-  @if (!needsName) {
-    <section class="lobby-content animate-fade-in">
+  <section class="lobby-content animate-fade-in">
       <div class="lobby-header">
-        <h2>Welcome, {{ gameService.playerName() }}!</h2>
+        <h2>Welcome, {{ authService.user()?.name }}!</h2>
         <div class="lobby-actions">
           <button class="btn btn-outline btn-sm" (click)="refresh()">🔄 Refresh</button>
           <button class="btn btn-primary" (click)="toggleCreateForm()">
@@ -44,7 +22,7 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Room Name</label>
-              <input type="text" [(ngModel)]="roomName" [placeholder]="gameService.playerName() + '\'s Room'" maxlength="30" />
+              <input type="text" [(ngModel)]="roomName" [placeholder]="(authService.user()?.name || 'Player') + '\'s Room'" maxlength="30" />
             </div>
             <div class="form-group">
               <label>Max Players: {{ maxPlayers }}</label>
@@ -94,5 +72,4 @@
         }
       </div>
     </section>
-  }
-</div>
+

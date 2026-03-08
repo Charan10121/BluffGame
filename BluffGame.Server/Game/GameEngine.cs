@@ -27,6 +27,9 @@ public class GameEngine
         room.GameState = new GameState
         {
             CurrentPlayerIndex = 0,
+            RoundStarterIndex = 0,
+            ConsecutivePassCount = 0,
+            RoundClaimedRank = null,
             Phase = TurnPhase.PlayCards,
             TurnNumber = 1
         };
@@ -52,14 +55,22 @@ public class GameEngine
         if (room.Players[state.CurrentPlayerIndex].Id != playerId)
             return (false, "It is not your turn.");
 
-        if (cardIndices.Count is 0 or > 4)
-            return (false, "You must play 1–4 cards.");
+        if (cardIndices.Count is 0)
+            return (false, "You must play at least 1 card.");
 
         if (cardIndices.Any(i => i < 0 || i >= player.Hand.Count))
             return (false, "Invalid card selection.");
 
         if (cardIndices.Distinct().Count() != cardIndices.Count)
             return (false, "Duplicate card selection.");
+
+        // Once a round starts with a claimed rank, all subsequent plays in that round
+        // must keep the same claimed rank until challenge resolution or full-pass reset.
+        if (state.RoundClaimedRank.HasValue && claimedRank != state.RoundClaimedRank.Value)
+            return (false, $"This round is locked to {state.RoundClaimedRank.Value}. Play that rank or pass.");
+
+        if (!state.RoundClaimedRank.HasValue)
+            state.RoundClaimedRank = claimedRank;
 
         // Extract cards from hand (remove in descending index order to preserve positions)
         var sortedIndices = cardIndices.OrderByDescending(i => i).ToList();
@@ -74,11 +85,14 @@ public class GameEngine
         // Add to pile
         state.Pile.AddRange(playedCards);
 
+        // Reset pass counter — someone played
+        state.ConsecutivePassCount = 0;
+
         // Record the claim
         state.LastClaim = new Claim
         {
             PlayerId = playerId,
-            ClaimedRank = claimedRank,
+            ClaimedRank = state.RoundClaimedRank.Value,
             CardCount = playedCards.Count,
             ActualCards = playedCards
         };
@@ -113,7 +127,9 @@ public class GameEngine
         var claimant = room.Players.First(p => p.Id == state.LastClaim.PlayerId);
 
         // Determine truth: all played cards must match the claimed rank
-        bool wasBluff = !state.LastClaim.ActualCards.All(c => c.Rank == state.LastClaim.ClaimedRank);
+        // Jokers are wild — they always match
+        bool wasBluff = !state.LastClaim.ActualCards.All(
+            c => c.Rank == Rank.Joker || c.Rank == state.LastClaim.ClaimedRank);
         var loser = wasBluff ? claimant : challenger;
 
         // Loser picks up the entire pile
@@ -139,6 +155,72 @@ public class GameEngine
         return (true, result, string.Empty);
     }
 
+    // ── Pass ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Player passes their turn (plays no cards).
+    /// If all active players pass consecutively, the pile is cleared and a new round begins.
+    /// </summary>
+    public (bool Success, bool RoundOver, string Error) Pass(Room room, string playerId)
+    {
+        var state = room.GameState!;
+        var player = room.Players.Find(p => p.Id == playerId);
+
+        if (player is null)
+            return (false, false, "Player not found.");
+
+        if (state.Phase != TurnPhase.PlayCards)
+            return (false, false, "Not in the play phase.");
+
+        if (room.Players[state.CurrentPlayerIndex].Id != playerId)
+            return (false, false, "It is not your turn.");
+
+        state.ConsecutivePassCount++;
+        room.LastActivityAt = DateTime.UtcNow;
+
+        int activePlayers = room.Players.Count(p => p.Hand.Count > 0);
+
+        if (state.ConsecutivePassCount >= activePlayers)
+        {
+            // All active players passed → clear pile, start new round
+            state.Pile.Clear();
+            state.ConsecutivePassCount = 0;
+
+            // Next player after the round starter begins the new round
+            int nextIdx = (state.RoundStarterIndex + 1) % room.Players.Count;
+            int attempts = 0;
+            while ((room.Players[nextIdx].Hand.Count == 0 || !room.Players[nextIdx].IsConnected) 
+                   && attempts < room.Players.Count)
+            {
+                nextIdx = (nextIdx + 1) % room.Players.Count;
+                attempts++;
+            }
+
+            state.CurrentPlayerIndex = nextIdx;
+            state.RoundStarterIndex = nextIdx;
+            state.RoundClaimedRank = null;
+            state.LastClaim = null;
+            state.TurnNumber++;
+            state.Phase = TurnPhase.PlayCards;
+            return (true, true, string.Empty);
+        }
+
+        // Advance to next active and connected player
+        int next = (state.CurrentPlayerIndex + 1) % room.Players.Count;
+        int att = 0;
+        while ((room.Players[next].Hand.Count == 0 || !room.Players[next].IsConnected) 
+               && att < room.Players.Count)
+        {
+            next = (next + 1) % room.Players.Count;
+            att++;
+        }
+        state.CurrentPlayerIndex = next;
+        state.TurnNumber++;
+        state.Phase = TurnPhase.PlayCards;
+
+        return (true, false, string.Empty);
+    }
+
     // ── Advance turn ─────────────────────────────────────────────────────
 
     public void AdvanceTurn(Room room)
@@ -154,17 +236,43 @@ public class GameEngine
             return;
         }
 
-        // Advance to next player who still has cards
-        int attempts = 0;
-        do
+        if (state.LastChallengeResult is not null)
         {
-            state.CurrentPlayerIndex = (state.CurrentPlayerIndex + 1) % room.Players.Count;
-            attempts++;
+            // After a challenge: the WINNER of the challenge starts the next round
+            var result = state.LastChallengeResult;
+            string winnerId = result.WasBluff ? result.ChallengerId : result.ChallengedPlayerId;
+            int winnerIdx = room.Players.FindIndex(p => p.Id == winnerId);
+
+            // If the winner has no cards or is disconnected, find next active player
+            int attempts = 0;
+            while ((room.Players[winnerIdx].Hand.Count == 0 || !room.Players[winnerIdx].IsConnected) 
+                   && attempts < room.Players.Count)
+            {
+                winnerIdx = (winnerIdx + 1) % room.Players.Count;
+                attempts++;
+            }
+
+            state.CurrentPlayerIndex = winnerIdx;
+            state.RoundStarterIndex = winnerIdx;
+            state.RoundClaimedRank = null;
         }
-        while (room.Players[state.CurrentPlayerIndex].Hand.Count == 0 && attempts < room.Players.Count);
+        else
+        {
+            // Normal advance (no challenge) — move to next active and connected player
+            int attempts = 0;
+            do
+            {
+                state.CurrentPlayerIndex = (state.CurrentPlayerIndex + 1) % room.Players.Count;
+                attempts++;
+            }
+            while ((room.Players[state.CurrentPlayerIndex].Hand.Count == 0 
+                    || !room.Players[state.CurrentPlayerIndex].IsConnected) 
+                   && attempts < room.Players.Count);
+        }
 
         state.Phase = TurnPhase.PlayCards;
         state.TurnNumber++;
+        state.ConsecutivePassCount = 0;
         state.LastClaim = null;
         state.LastChallengeResult = null;
     }
@@ -189,6 +297,7 @@ public class GameEngine
             RoomId = room.Id,
             Hand = player?.Hand.Select(MapCard).ToList() ?? new(),
             PileCount = state.Pile.Count,
+            RoundClaimedRank = state.RoundClaimedRank?.ToString(),
             LastClaim = state.LastClaim is not null ? new ClaimDto
             {
                 PlayerId = state.LastClaim.PlayerId,

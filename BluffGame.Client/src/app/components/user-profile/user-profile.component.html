@@ -1,0 +1,76 @@
+@if (authService.isAuthenticated()) {
+  <!-- Backdrop to close dropdown -->
+  @if (isOpen()) {
+    <div class="profile-backdrop" (click)="close()"></div>
+  }
+
+  <div class="profile-wrapper">
+    <!-- Avatar trigger -->
+    <button class="profile-trigger" (click)="toggle()" [title]="authService.user()?.name ?? ''">
+      @if (authService.user()?.picture) {
+        <img
+          class="avatar"
+          [src]="authService.user()?.picture"
+          [alt]="authService.user()?.name"
+          referrerpolicy="no-referrer"
+        />
+      } @else {
+        <span class="avatar avatar-initials">{{ getInitials() }}</span>
+      }
+    </button>
+
+    <!-- Dropdown -->
+    @if (isOpen()) {
+      <div class="profile-dropdown animate-fade-in">
+        <div class="dropdown-header">
+          @if (authService.user()?.picture) {
+            <img
+              class="dropdown-avatar"
+              [src]="authService.user()?.picture"
+              [alt]="authService.user()?.name"
+              referrerpolicy="no-referrer"
+            />
+          } @else {
+            <span class="dropdown-avatar avatar-initials">{{ getInitials() }}</span>
+          }
+          <div class="dropdown-info">
+            @if (isEditing()) {
+              <div class="edit-name">
+                <input
+                  class="name-input"
+                  [(ngModel)]="editName"
+                  (keyup.enter)="saveName()"
+                  (keyup.escape)="cancelEdit()"
+                  placeholder="Enter name"
+                  autofocus
+                />
+                <div class="edit-actions">
+                  <button class="btn-icon save" (click)="saveName()" title="Save">✓</button>
+                  <button class="btn-icon cancel" (click)="cancelEdit()" title="Cancel">✕</button>
+                </div>
+              </div>
+            } @else {
+              <span class="dropdown-name">{{ authService.user()?.name }}</span>
+            }
+            <span class="dropdown-email">{{ authService.user()?.email }}</span>
+          </div>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <div class="dropdown-menu">
+          @if (!isEditing()) {
+            <button class="dropdown-item" (click)="startEditing()">
+              <span class="item-icon">✏️</span>
+              Edit Display Name
+            </button>
+          }
+          <button class="dropdown-item logout" (click)="logout()">
+            <span class="item-icon">🚪</span>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}

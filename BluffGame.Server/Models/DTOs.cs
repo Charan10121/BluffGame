@@ -7,6 +7,7 @@ public class PlayerGameView
     public string RoomId { get; set; } = string.Empty;
     public List<CardDto> Hand { get; set; } = new();
     public int PileCount { get; set; }
+    public string? RoundClaimedRank { get; set; }
     public ClaimDto? LastClaim { get; set; }
     public List<PlayerViewDto> Players { get; set; } = new();
     public string? CurrentPlayerId { get; set; }
@@ -113,6 +114,7 @@ public class PlayCardsRequest
 public class ReconnectResult
 {
     public bool Success { get; set; }
+    public string? PlayerId { get; set; }
     public RoomDetails? Room { get; set; }
     public PlayerGameView? GameState { get; set; }
 }

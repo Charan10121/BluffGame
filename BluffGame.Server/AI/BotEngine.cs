@@ -27,4 +27,11 @@ public class BotEngine
         var strategy = _strategies[bot.BotDifficulty ?? BotDifficulty.Easy];
         return strategy.DecideChallenge(bot, claim, state, players);
     }
+
+    public bool ShouldPass(
+        Player bot, GameState state, IReadOnlyList<Player> players)
+    {
+        var strategy = _strategies[bot.BotDifficulty ?? BotDifficulty.Easy];
+        return strategy.ShouldPass(bot, state, players);
+    }
 }

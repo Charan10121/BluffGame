@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GameService } from '../../services/game.service';
+import { AuthService } from '../../services/auth.service';
 import { CreateRoomRequest } from '../../models';
 
 @Component({
@@ -13,9 +14,7 @@ import { CreateRoomRequest } from '../../models';
 })
 export class LobbyComponent {
   gameService = inject(GameService);
-
-  // Name entry
-  nameInput = '';
+  authService = inject(AuthService);
 
   // Create room form
   showCreateForm = signal(false);
@@ -24,23 +23,15 @@ export class LobbyComponent {
   botCount = 1;
   botDifficulty = 'Easy';
 
-  get needsName(): boolean {
-    return !this.gameService.playerName();
-  }
-
-  async submitName(): Promise<void> {
-    if (!this.nameInput.trim()) return;
-    await this.gameService.setName(this.nameInput.trim());
-  }
-
   toggleCreateForm(): void {
     this.showCreateForm.update(v => !v);
   }
 
   async createRoom(): Promise<void> {
+    const userName = this.authService.user()?.name || 'Player';
     const request: CreateRoomRequest = {
-      roomName: this.roomName || `${this.gameService.playerName()}'s Room`,
-      playerName: this.gameService.playerName()!,
+      roomName: this.roomName || `${userName}'s Room`,
+      playerName: userName,
       maxPlayers: this.maxPlayers,
       botCount: this.botCount,
       botDifficulty: this.botDifficulty

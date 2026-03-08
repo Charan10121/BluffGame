@@ -10,14 +10,19 @@ public static class Deck
 {
     public static List<Card> CreateStandardDeck()
     {
-        var deck = new List<Card>(52);
+        var deck = new List<Card>(54);
         foreach (var suit in Enum.GetValues<Suit>())
         {
+            if (suit == Suit.Joker) continue;
             foreach (var rank in Enum.GetValues<Rank>())
             {
+                if (rank == Rank.Joker) continue;
                 deck.Add(new Card(suit, rank));
             }
         }
+        // Add 2 Jokers (wild cards — match any claimed rank)
+        deck.Add(new Card(Suit.Joker, Rank.Joker));
+        deck.Add(new Card(Suit.Joker, Rank.Joker));
         return deck;
     }
 
@@ -40,11 +45,13 @@ public static class Deck
         }
     }
 
-    /// <summary>Sort a hand by rank then suit for consistent display.</summary>
+    /// <summary>Sort a hand by rank then suit for consistent display. Jokers go to the end.</summary>
     public static void SortHand(List<Card> hand)
     {
         hand.Sort((a, b) =>
         {
+            if (a.Rank == Rank.Joker && b.Rank != Rank.Joker) return 1;
+            if (a.Rank != Rank.Joker && b.Rank == Rank.Joker) return -1;
             int cmp = a.Rank.CompareTo(b.Rank);
             return cmp != 0 ? cmp : a.Suit.CompareTo(b.Suit);
         });

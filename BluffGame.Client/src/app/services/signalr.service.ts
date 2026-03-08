@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { Subject, BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 import {
   PlayerGameView,
   RoomSummary,
@@ -14,11 +15,13 @@ import {
 /**
  * Low-level SignalR connection wrapper.
  * Exposes hub events as RxJS Subjects and hub invocations as async methods.
+ * Passes JWT from AuthService for authenticated WebSocket connections.
  */
 @Injectable({ providedIn: 'root' })
 export class SignalRService {
 
-  private connection: signalR.HubConnection;
+  private authService = inject(AuthService);
+  private connection!: signalR.HubConnection;
 
   // ── Connection state ──────────────────────────────────────────────
 
@@ -42,8 +45,14 @@ export class SignalRService {
   onPlayerReconnected$ = new Subject<string>();
 
   constructor() {
+    // Connection is built on first start() call so AuthService has a token ready
+  }
+
+  private buildConnection(): void {
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(environment.hubUrl)
+      .withUrl(environment.hubUrl, {
+        accessTokenFactory: () => this.authService.getToken() || ''
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(signalR.LogLevel.Warning)
       .build();
@@ -55,6 +64,9 @@ export class SignalRService {
   // ── Connection management ─────────────────────────────────────────
 
   async start(): Promise<void> {
+    if (!this.connection) {
+      this.buildConnection();
+    }
     if (this.connection.state === signalR.HubConnectionState.Disconnected) {
       await this.connection.start();
       this.connectionState$.next(this.connection.state);
@@ -97,6 +109,10 @@ export class SignalRService {
 
   async challenge(): Promise<void> {
     await this.connection.invoke('Challenge');
+  }
+
+  async pass(): Promise<void> {
+    await this.connection.invoke('Pass');
   }
 
   // ── Private ───────────────────────────────────────────────────────

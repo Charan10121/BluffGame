@@ -5,11 +5,13 @@ public enum Suit
     Hearts,
     Diamonds,
     Clubs,
-    Spades
+    Spades,
+    Joker
 }
 
 public enum Rank
 {
+    Joker = 0,
     Ace = 1,
     Two,
     Three,

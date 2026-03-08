@@ -15,4 +15,7 @@ public interface IBotStrategy
     /// <summary>Decide whether to challenge the last claim.</summary>
     bool DecideChallenge(
         Player bot, Claim claim, GameState state, IReadOnlyList<Player> players);
+
+    /// <summary>Decide whether to pass (play no cards) this turn.</summary>
+    bool ShouldPass(Player bot, GameState state, IReadOnlyList<Player> players);
 }

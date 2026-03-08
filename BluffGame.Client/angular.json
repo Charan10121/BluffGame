@@ -43,6 +43,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": { "buildTarget": "bluff-game-client:build:production" },
             "development": { "buildTarget": "bluff-game-client:build:development" }

@@ -1,0 +1,41 @@
+<div class="login-page">
+  <header class="hero">
+    <h1>🃏 BLUFF</h1>
+    <p class="subtitle">The classic card game of deception</p>
+  </header>
+
+  <section class="login-card animate-fade-in">
+    <h2>Sign In to Play</h2>
+
+    <!-- Google Sign-In Button -->
+    <div class="google-signin-container">
+      <div #googleBtn class="google-btn-wrapper"></div>
+    </div>
+
+    @if (authService.isLoading()) {
+      <div class="loading-indicator">
+        <span class="spinner"></span>
+        Signing in...
+      </div>
+    }
+
+    <!-- Dev login (development only) -->
+    @if (isDevMode) {
+      <div class="dev-divider">
+        <span>or (dev mode)</span>
+      </div>
+      <div class="dev-login">
+        <input
+          type="text"
+          [(ngModel)]="devName"
+          placeholder="Enter a dev name..."
+          maxlength="20"
+          (keyup.enter)="devLogin()"
+        />
+        <button class="btn btn-outline" (click)="devLogin()" [disabled]="!devName.trim()">
+          Dev Login
+        </button>
+      </div>
+    }
+  </section>
+</div>

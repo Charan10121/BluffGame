@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { SignalRService } from './signalr.service';
+import { AuthService } from './auth.service';
 import {
   PlayerGameView,
   RoomSummary,
@@ -10,6 +11,7 @@ import {
 
 const STORAGE_PLAYER_ID = 'bluff_player_id';
 const STORAGE_PLAYER_NAME = 'bluff_player_name';
+const STORAGE_ROOM_ID = 'bluff_room_id';
 const MAX_NOTIFICATIONS = 6;
 const NOTIFICATION_TTL_MS = 5000;
 
@@ -20,12 +22,12 @@ const NOTIFICATION_TTL_MS = 5000;
 @Injectable({ providedIn: 'root' })
 export class GameService {
   private signalR = inject(SignalRService);
+  private authService = inject(AuthService);
   private router = inject(Router);
 
   // ── Identity ──────────────────────────────────────────────────────
 
   playerId = signal<string | null>(null);
-  playerName = signal<string | null>(null);
 
   // ── State ─────────────────────────────────────────────────────────
 
@@ -37,6 +39,11 @@ export class GameService {
   turnTimeRemaining = signal(0);
   notifications = signal<string[]>([]);
   gameOverInfo = signal<{ winnerId: string; winnerName: string } | null>(null);
+
+  // ── Reconnect prompt ──────────────────────────────────────────────
+
+  showReconnectPrompt = signal(false);
+  pendingReconnectData = signal<{ room: RoomDetails; gameState: PlayerGameView | null } | null>(null);
 
   // ── Computed ──────────────────────────────────────────────────────
 
@@ -92,26 +99,49 @@ export class GameService {
 
   private async connect(): Promise<void> {
     try {
+      // Only connect if authenticated
+      if (!this.authService.isAuthenticated()) {
+        return;
+      }
+
       await this.signalR.start();
       this.isConnected.set(true);
 
-      // Attempt reconnection with stored identity
+      // Use auth-provided identity
+      const user = this.authService.user();
       const storedId = localStorage.getItem(STORAGE_PLAYER_ID);
-      const storedName = localStorage.getItem(STORAGE_PLAYER_NAME);
+      const name = user?.name || localStorage.getItem(STORAGE_PLAYER_NAME) || 'Player';
 
-      if (storedId && storedName) {
-        const result = await this.signalR.attemptReconnect(storedId, storedName);
-        this.playerId.set(storedId);
-        this.playerName.set(storedName);
+      if (storedId) {
+        const result = await this.signalR.attemptReconnect(storedId, name);
+
+        // Always use the server-returned playerId (may be new if session expired)
+        const activePlayerId = result.playerId || storedId;
+        this.playerId.set(activePlayerId);
+        localStorage.setItem(STORAGE_PLAYER_ID, activePlayerId);
+        localStorage.setItem(STORAGE_PLAYER_NAME, name);
 
         if (result.success && result.room) {
-          this.currentRoom.set(result.room);
-          if (result.gameState) {
-            this.gameState.set(result.gameState);
-          }
-          this.router.navigate(['/room', result.room.id]);
+          // Show reconnect prompt instead of auto-navigating
+          this.pendingReconnectData.set({
+            room: result.room,
+            gameState: result.gameState
+          });
+          this.showReconnectPrompt.set(true);
           return;
         }
+
+        // No active room — clear stored room ID
+        localStorage.removeItem(STORAGE_ROOM_ID);
+        return;
+      }
+
+      // No stored session — register with auth identity
+      if (user) {
+        const id = await this.signalR.setPlayerInfo(user.name);
+        this.playerId.set(id);
+        localStorage.setItem(STORAGE_PLAYER_ID, id);
+        localStorage.setItem(STORAGE_PLAYER_NAME, user.name);
       }
     } catch (err) {
       console.error('Connection failed:', err);
@@ -125,7 +155,6 @@ export class GameService {
   async setName(name: string): Promise<void> {
     const id = await this.signalR.setPlayerInfo(name);
     this.playerId.set(id);
-    this.playerName.set(name);
     localStorage.setItem(STORAGE_PLAYER_ID, id);
     localStorage.setItem(STORAGE_PLAYER_NAME, name);
     await this.signalR.getRooms();
@@ -149,6 +178,7 @@ export class GameService {
     this.gameState.set(null);
     this.gameOverInfo.set(null);
     this.clearTimers();
+    localStorage.removeItem(STORAGE_ROOM_ID);
     this.router.navigate(['/lobby']);
   }
 
@@ -162,6 +192,38 @@ export class GameService {
 
   async challenge(): Promise<void> {
     await this.signalR.challenge();
+  }
+
+  async pass(): Promise<void> {
+    await this.signalR.pass();
+  }
+
+  // ── Reconnect prompt ──────────────────────────────────────────────
+
+  async acceptReconnect(): Promise<void> {
+    const data = this.pendingReconnectData();
+    if (!data) return;
+
+    this.currentRoom.set(data.room);
+    if (data.gameState) {
+      this.gameState.set(data.gameState);
+    }
+    this.showReconnectPrompt.set(false);
+    this.pendingReconnectData.set(null);
+    localStorage.setItem(STORAGE_ROOM_ID, data.room.id);
+    this.router.navigate(['/room', data.room.id]);
+  }
+
+  async declineReconnect(): Promise<void> {
+    this.showReconnectPrompt.set(false);
+    this.pendingReconnectData.set(null);
+    localStorage.removeItem(STORAGE_ROOM_ID);
+    try {
+      await this.signalR.leaveRoom();
+    } catch { /* may fail if not in room server-side */ }
+    this.currentRoom.set(null);
+    this.gameState.set(null);
+    this.router.navigate(['/lobby']);
   }
 
   // ── Subscriptions ─────────────────────────────────────────────────
@@ -178,6 +240,7 @@ export class GameService {
     this.signalR.onRoomJoined$.subscribe(details => {
       this.currentRoom.set(details);
       this.gameOverInfo.set(null);
+      localStorage.setItem(STORAGE_ROOM_ID, details.id);
       this.router.navigate(['/room', details.id]);
     });
 
