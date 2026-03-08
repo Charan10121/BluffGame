@@ -44,9 +44,12 @@ Play with friends or against AI bots — bluff your way to victory!
 
 ## 🚀 Local Development
 
-### Prerequisites
-
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+**Setup environment variables:**
+```bash
+# BluffGame.Server
+export GOOGLE_CLIENT_ID="your-oauth-client-id"
+export JWT_SECRET="your-secret-key-min-32-chars"
+```
 - [Node.js 20+](https://nodejs.org/)
 
 ### Run
