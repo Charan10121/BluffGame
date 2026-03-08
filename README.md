@@ -1,8 +1,7 @@
 # 🃏 Bluff – Real-Time Multiplayer Card Game
-# 🃏 Bluff – Multiplayer Card Game
 
 A real-time multiplayer implementation of the classic card game **Bluff** (also known as *Cheat* or *BS*), built with **ASP.NET Core + SignalR** backend and **Angular** frontend.
-**Live Demo:** https://bluff-the-card-game.onrender.com
+**Live Demo:** https://bluff-the-card-game-fe5n.onrender.com/
 
 
 ## Features
