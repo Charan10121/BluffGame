@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { SignalRService } from './signalr.service';
 import { AuthService } from './auth.service';
@@ -89,6 +89,15 @@ export class GameService {
 
   private challengeInterval: ReturnType<typeof setInterval> | null = null;
   private turnInterval: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    // Re-trigger connection when auth state changes (e.g. after login)
+    effect(() => {
+      if (this.authService.isAuthenticated() && !this.isConnected()) {
+        this.connect();
+      }
+    });
+  }
 
   // ── Initialisation ────────────────────────────────────────────────
 

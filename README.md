@@ -1,13 +1,17 @@
+# 🃏 Bluff – Real-Time Multiplayer Card Game
 # 🃏 Bluff – Multiplayer Card Game
 
 A real-time multiplayer implementation of the classic card game **Bluff** (also known as *Cheat* or *BS*), built with **ASP.NET Core + SignalR** backend and **Angular** frontend.
+**Live Demo:** https://bluff-the-card-game.onrender.com
+
 
 ## Features
 
 - **Real-time multiplayer** via WebSockets (SignalR)
 - **AI bots** with Easy and Medium difficulty strategies
 - **Lobby system** – create rooms, share with friends, or fill with bots
-- **Hybrid play** – any mix of human players and bots (2–6 players)
+- **Google OAuth 2.0** authentication with JWT-secured connections
+- **Reconnection handling** – rejoin games after brief disconnections
 - **Reconnection handling** – rejoin games after disconnection
 - **Server-authoritative** – all game logic runs on the server to prevent cheating
 
@@ -21,7 +25,7 @@ A real-time multiplayer implementation of the classic card game **Bluff** (also 
 | Hosting | Render.com (Docker, free tier) |
 
 ## Game Rules
-
+2. On your turn, place 1–4 cards face-down and claim a rank (e.g., "2 Kings")
 1. A standard 52-card deck is dealt evenly among all players
 2. On your turn, place 1–4 cards face-down and **claim** a rank (e.g., "2 Kings")
 3. Other players have a window to **challenge** ("Bluff!") your claim
@@ -30,22 +34,25 @@ A real-time multiplayer implementation of the classic card game **Bluff** (also 
    - **Was truthful** → the challenger picks up the pile
 5. First player to empty their hand **wins**
 
-## Local Development
+**Requirements:** .NET 8 SDK, Node.js 20+
 
-### Prerequisites
-
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+**Setup environment variables:**
+```bash
+# BluffGame.Server
+export GOOGLE_CLIENT_ID="your-oauth-client-id"
+export JWT_SECRET="your-secret-key-min-32-chars"
+```
 - [Node.js 20+](https://nodejs.org/)
-- [Angular CLI](https://angular.dev/) (`npm i -g @angular/cli`)
+**Backend:**
 
 ### Run the backend
 
 ```bash
 cd BluffGame.Server
 dotnet run
-```
+Runs at http://localhost:5000
 
-Server starts at `http://localhost:5000`.
+**Frontend:**
 
 ### Run the frontend (dev server)
 
@@ -53,7 +60,7 @@ Server starts at `http://localhost:5000`.
 cd BluffGame.Client
 npm install
 npm start
-```
+Runs at http://localhost:4200 (proxies `/api` and `/gamehub` to backend)
 
 Angular dev server starts at `http://localhost:4200` with proxy to the backend.
 
@@ -62,41 +69,11 @@ Angular dev server starts at `http://localhost:4200` with proxy to the backend.
 ```bash
 docker build -t bluff-game .
 docker run -p 10000:10000 bluff-game
-```
+Runs at http://localhost:10000
 
 Open `http://localhost:10000`.
 
-## Deployment
+Push to GitHub and connect on [Render Dashboard](https://dashboard.render.com/). Auto-detects `render.yaml` and deploys via Docker.
 
-This project is configured for one-click deployment on **Render.com**:
-
-1. Push to a GitHub repository
-2. Connect the repo on [Render Dashboard](https://dashboard.render.com/)
-3. Render auto-detects `render.yaml` and deploys
-
-### Keep-Alive (prevent free-tier sleep)
-
-Use [cron-job.org](https://cron-job.org) to ping `https://<your-app>.onrender.com/health` every 14 minutes.
-
-## Project Structure
-
-```
-BluffGame/
-├── BluffGame.Server/          # ASP.NET Core backend
-│   ├── Models/                # Domain models & DTOs
-│   ├── Game/                  # Game engine (deck, rules)
-│   ├── AI/                    # Bot strategies
-│   ├── Services/              # Room manager, game coordinator
-│   └── Hubs/                  # SignalR hub
-├── BluffGame.Client/          # Angular frontend
-│   └── src/app/
-│       ├── models/            # TypeScript interfaces
-│       ├── services/          # SignalR & game services
-│       └── components/        # UI components
-├── Dockerfile                 # Multi-stage build
-└── render.yaml                # Render deployment config
-```
-
-## License
 
 MIT
